@@ -109,6 +109,7 @@ function moduleTreeToQueue(moduleTree) {
 }
 
 const moduleQueue = moduleTreeToQueue(moduleTree);
+console.log("moduleQueue", moduleQueue);
 // *moduleQueue*
 // [
 //   {
