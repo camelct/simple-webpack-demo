@@ -25,7 +25,7 @@ const buildModule = filename => {
   const curModuleId = moduleId;
 
   traverse(ast, {
-    enter({ node }) {
+    enter({ node, parentPath }) {
       // 根据 AST 定位到所有的 require 函数，寻找出所有的依赖
       if (node.type === "CallExpression") {
         if (node.callee.name === "require") {
@@ -53,8 +53,7 @@ const buildModule = filename => {
           node.callee.type === "MemberExpression" &&
           node.callee.object.name === "console"
         ) {
-          node.callee = null;
-          node.arguments = null;
+          parentPath.remove();
         }
       }
     },
@@ -90,9 +89,9 @@ const moduleTree = buildModule(aimJsFilename);
 //         },
 //       ],
 //       filename: "D:\\node-webpack-study\\src\\multi.js",
-//       code: "const del = require(3);\n();\nmodule.exports = (...args) => args.reduce((x, y) => x * y, 0);",
+//       code: "const del = require(3);\nmodule.exports = (...args) => args.reduce((x, y) => x * y, 0);",
 //     },
 //   ],
 //   filename: "D:\\node-webpack-study\\src\\index.js",
-//   code: "const sum = require(1);\nconst multi = require(2);\n();\n();",
-// }
+//   code: "const sum = require(1);\nconst multi = require(2);",
+// };
