@@ -5,7 +5,7 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator").default;
 
-const aimJsFilename = "./src/index.js";
+const aimJsFilename = "../index.js";
 
 let moduleId = 0;
 
@@ -96,3 +96,4 @@ const moduleTree = buildModule(aimJsFilename);
 //   filename: "D:\\node-webpack-study\\src\\index.js",
 //   code: "const sum = require(1);\nconst multi = require(2);\n();\n();",
 // }
+console.log(JSON.stringify(moduleTree, null, '  '));

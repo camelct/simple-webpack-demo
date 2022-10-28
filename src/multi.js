@@ -1,4 +1,4 @@
-const del = require("./del");
+const del = require("./del.js");
 
 console.log("test-del", del(2, 1));
 
