@@ -49,12 +49,13 @@ const buildModule = filename => {
             const module = buildModule(nextFilename);
             deps.push(module);
           }
-        } else if (
-          node.callee.type === "MemberExpression" &&
-          node.callee.object.name === "console"
-        ) {
-          parentPath.remove();
         }
+        // else if (
+        //   node.callee.type === "MemberExpression" &&
+        //   node.callee.object.name === "console"
+        // ) {
+        //   parentPath.remove();
+        // }
       }
     },
   });
@@ -134,3 +135,86 @@ const moduleQueue = moduleTreeToQueue(moduleTree);
 //     code: "module.exports = (...args) => args.reduce((x, y) => x / y, 0);",
 //   },
 // ];
+
+const wrapperModuleFn = code => {
+  return `(module, __unused_webpack_exports, require) => {
+    ${code}
+  }`;
+};
+
+const modules = moduleQueue.map(item => {
+  return `
+  ${wrapperModuleFn(item.code)}
+  `;
+});
+
+/**
+ **webpack_module*
+ var __webpack_modules__ = [
+  ,
+  module => {
+    module.exports = (...args) => args.reduce((x, y) => x + y, 0);
+  },
+  (module, __unused_webpack_exports, __webpack_require__) => {
+    const del = __webpack_require__(3);
+    module.exports = (...args) => args.reduce((x, y) => x * y, 1);
+  },
+  module => {
+    module.exports = (...args) => args.reduce((x, y) => x / y, 1);
+  },
+];
+
+var __webpack_module_cache__ = {};
+function __webpack_require__(moduleId) {
+  var cachedModule = __webpack_module_cache__[moduleId];
+  if (cachedModule !== undefined) {
+    return cachedModule.exports;
+  }
+  var module = (__webpack_module_cache__[moduleId] = {
+    exports: {},
+  });
+
+  __webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+
+  return module.exports;
+}
+
+var __webpack_exports__ = {};
+
+(() => {
+  const sum = __webpack_require__( 1);
+  const multi = __webpack_require__(2);
+
+  console.log("test-sum", sum(2, 3));
+  console.log("test-multi", multi(2, 3));
+})();
+ */
+
+const generateBundle = () => {
+  return `
+  var __webpack_modules__ = [${modules}];
+
+var __webpack_module_cache__ = {};
+function require(moduleId) {
+  var cachedModule = __webpack_module_cache__[moduleId];
+  if (cachedModule !== undefined) {
+    return cachedModule.exports;
+  }
+  var module = (__webpack_module_cache__[moduleId] = {
+    exports: {},
+  });
+
+  __webpack_modules__[moduleId](module, module.exports, require);
+
+  return module.exports;
+}
+
+var __webpack_exports__ = {};
+  
+(() => {
+ ${moduleQueue[0].code} 
+})();
+  `;
+};
+
+console.log(generateBundle());
