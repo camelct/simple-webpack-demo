@@ -2,6 +2,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 
 const { parse } = require("@babel/parser");
+// const t = require("@babel/types");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator").default;
 
@@ -59,6 +60,21 @@ const buildModule = filename => {
           parentPath.remove();
         }
       }
+
+      // 调试 函数注入用
+      // const before = t.binaryExpression(
+      //   "*",
+      //   t.identifier("a"),
+      //   t.identifier("b"),
+      // );
+      // const after = t.binaryExpression(
+      //   "*",
+      //   t.identifier("d"),
+      //   t.identifier("c"),
+      // );
+
+      // path.insertBefore(before);
+      // path.insertAfter(after);
     },
   });
 
@@ -146,11 +162,13 @@ const wrapperModuleFn = code =>
     ${code}
   }`;
 
-const modules = moduleQueue.map(
-  item => `
+const modules = moduleQueue
+  .map(
+    item => `
   ${wrapperModuleFn(item.code)}
 `,
-);
+  )
+  .splice(1);
 
 /**
  **webpack_module*

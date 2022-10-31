@@ -9,7 +9,6 @@ console.log("test-multi", multi(2, 3));
 
 console.warn("test-warn", "这是警告");
 console.error("test-error", "这是错误");
-
 function log_fn() {
   console.time("time");
   const a = 1;
