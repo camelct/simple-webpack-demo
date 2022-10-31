@@ -215,5 +215,5 @@ var __webpack_exports__ = {};
   `;
 };
 
-// console.log(generateBundle());
+console.log(generateBundle());
 fs.writeFileSync("./dist/bundle.js", generateBundle());
