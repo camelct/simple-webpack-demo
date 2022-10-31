@@ -6,7 +6,9 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator").default;
 
-const aimJsFilename = "./src/index.js";
+const workDir = path.join(__dirname, "./");
+
+const aimJsFilename = path.join(workDir, "src", "index.js");
 
 let moduleId = 0;
 
@@ -121,16 +123,19 @@ const moduleTree = buildModule(aimJsFilename);
 function moduleTreeToQueue(moduleTree) {
   const { deps, ...module } = moduleTree;
   const moduleQueue = deps.reduce(
-    (cur, item) => {
-      return cur.concat(moduleTreeToQueue(item));
-    },
+    (cur, item) => cur.concat(moduleTreeToQueue(item)),
     [module],
   );
 
   return moduleQueue;
 }
 
-const moduleQueue = moduleTreeToQueue(moduleTree);
+const moduleQueue = moduleTreeToQueue(moduleTree).map(item => {
+  if (item.code)
+    item.code = item.code.replace(/require/g, "__webpack_require__");
+  return item;
+});
+
 // *moduleQueue*
 // [
 //   {
@@ -158,7 +163,7 @@ const moduleQueue = moduleTreeToQueue(moduleTree);
 // ];
 
 const wrapperModuleFn = code =>
-  `(module, __unused_webpack_exports, require) => {
+  `(module, __unused_webpack_exports, __webpack_require__) => {
     ${code}
   }`;
 
@@ -216,7 +221,7 @@ const generateBundle = () => {
   return `var __webpack_modules__ = [, ${modules}];
 
 var __webpack_module_cache__ = {};
-function require(moduleId) {
+function __webpack_require__(moduleId) {
   var cachedModule = __webpack_module_cache__[moduleId];
   if (cachedModule !== undefined) {
     return cachedModule.exports;
@@ -225,7 +230,7 @@ function require(moduleId) {
     exports: {},
   });
 
-  __webpack_modules__[moduleId](module, module.exports, require);
+  __webpack_modules__[moduleId](module, module.exports, __webpack_require__);
 
   return module.exports;
 }
@@ -238,4 +243,9 @@ var __webpack_exports__ = {};
   `;
 };
 
-fs.writeFileSync("./dist/bundle.js", generateBundle());
+const outputDir = path.join(workDir, "dist");
+fs.access(outputDir, err => {
+  if (err) fs.mkdirSync(outputDir);
+
+  fs.writeFileSync(path.join(outputDir, "bundle.js"), generateBundle());
+});
