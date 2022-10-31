@@ -49,9 +49,12 @@ const buildModule = filename => {
             const module = buildModule(nextFilename);
             deps.push(module);
           }
-        } else if (
+        }
+        // 清除 console
+        else if (
           node.callee.type === "MemberExpression" &&
-          node.callee.object.name === "console"
+          node.callee.object.name === "console" &&
+          node.callee.property.name === "log"
         ) {
           parentPath.remove();
         }
@@ -63,7 +66,10 @@ const buildModule = filename => {
     id: curModuleId,
     deps,
     filename,
-    code: generate(ast).code,
+    code: generate(ast, {
+      // 清除 注释
+      comments: false,
+    }).code,
   };
 };
 
@@ -135,17 +141,16 @@ const moduleQueue = moduleTreeToQueue(moduleTree);
 //   },
 // ];
 
-const wrapperModuleFn = code => {
-  return `(module, __unused_webpack_exports, require) => {
+const wrapperModuleFn = code =>
+  `(module, __unused_webpack_exports, require) => {
     ${code}
   }`;
-};
 
-const modules = moduleQueue.map(item => {
-  return `
+const modules = moduleQueue.map(
+  item => `
   ${wrapperModuleFn(item.code)}
-  `;
-});
+`,
+);
 
 /**
  **webpack_module*
@@ -190,7 +195,7 @@ var __webpack_exports__ = {};
  */
 
 const generateBundle = () => {
-  return `var __webpack_modules__ = [${modules}];
+  return `var __webpack_modules__ = [, ${modules}];
 
 var __webpack_module_cache__ = {};
 function require(moduleId) {
@@ -215,5 +220,4 @@ var __webpack_exports__ = {};
   `;
 };
 
-// console.log(generateBundle());
 fs.writeFileSync("./dist/bundle.js", generateBundle());
