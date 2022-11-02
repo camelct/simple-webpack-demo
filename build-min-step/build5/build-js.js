@@ -2,10 +2,13 @@ const path = require("node:path");
 const fs = require("node:fs");
 
 const { parse } = require("@babel/parser");
+// const t = require("@babel/types");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator").default;
 
-const aimJsFilename = "./src/index.js";
+const workDir = path.join(__dirname, "../../");
+
+const aimJsFilename = path.join(workDir, "src", "index.js");
 
 let moduleId = 0;
 
@@ -49,13 +52,31 @@ const buildModule = filename => {
             const module = buildModule(nextFilename);
             deps.push(module);
           }
-        } else if (
+        }
+        // 清除 console
+        else if (
           node.callee.type === "MemberExpression" &&
-          node.callee.object.name === "console"
+          node.callee.object.name === "console" &&
+          node.callee.property.name === "log"
         ) {
           parentPath.remove();
         }
       }
+
+      // 调试 函数注入用
+      // const before = t.binaryExpression(
+      //   "*",
+      //   t.identifier("a"),
+      //   t.identifier("b"),
+      // );
+      // const after = t.binaryExpression(
+      //   "*",
+      //   t.identifier("d"),
+      //   t.identifier("c"),
+      // );
+
+      // path.insertBefore(before);
+      // path.insertAfter(after);
     },
   });
 
@@ -63,7 +84,10 @@ const buildModule = filename => {
     id: curModuleId,
     deps,
     filename,
-    code: generate(ast).code,
+    code: generate(ast, {
+      // 清除 注释
+      comments: false,
+    }).code,
   };
 };
 
@@ -99,17 +123,19 @@ const moduleTree = buildModule(aimJsFilename);
 function moduleTreeToQueue(moduleTree) {
   const { deps, ...module } = moduleTree;
   const moduleQueue = deps.reduce(
-    (cur, item) => {
-      return cur.concat(moduleTreeToQueue(item));
-    },
+    (cur, item) => cur.concat(moduleTreeToQueue(item)),
     [module],
   );
 
   return moduleQueue;
 }
 
-const moduleQueue = moduleTreeToQueue(moduleTree);
-console.log("moduleQueue", moduleQueue);
+const moduleQueue = moduleTreeToQueue(moduleTree).map(item => {
+  if (item.code)
+    item.code = item.code.replace(/require/g, "__webpack_require__");
+  return item;
+});
+
 // *moduleQueue*
 // [
 //   {
@@ -135,3 +161,91 @@ console.log("moduleQueue", moduleQueue);
 //     code: "module.exports = (...args) => args.reduce((x, y) => x / y, 0);",
 //   },
 // ];
+
+const wrapperModuleFn = code =>
+  `(module, __unused_webpack_exports, __webpack_require__) => {
+    ${code}
+  }`;
+
+const modules = moduleQueue
+  .map(
+    item => `
+  ${wrapperModuleFn(item.code)}
+`,
+  )
+  .splice(1);
+
+/**
+ **webpack_module*
+ var __webpack_modules__ = [
+  ,
+  module => {
+    module.exports = (...args) => args.reduce((x, y) => x + y, 0);
+  },
+  (module, __unused_webpack_exports, __webpack_require__) => {
+    const del = __webpack_require__(3);
+    module.exports = (...args) => args.reduce((x, y) => x * y, 1);
+  },
+  module => {
+    module.exports = (...args) => args.reduce((x, y) => x / y, 1);
+  },
+];
+
+var __webpack_module_cache__ = {};
+function __webpack_require__(moduleId) {
+  var cachedModule = __webpack_module_cache__[moduleId];
+  if (cachedModule !== undefined) {
+    return cachedModule.exports;
+  }
+  var module = (__webpack_module_cache__[moduleId] = {
+    exports: {},
+  });
+
+  __webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+
+  return module.exports;
+}
+
+var __webpack_exports__ = {};
+
+(() => {
+  const sum = __webpack_require__( 1);
+  const multi = __webpack_require__(2);
+
+  console.log("test-sum", sum(2, 3));
+  console.log("test-multi", multi(2, 3));
+})();
+ */
+
+const generateBundle = () => {
+  return `var __webpack_modules__ = [, ${modules}];
+
+var __webpack_module_cache__ = {};
+function __webpack_require__(moduleId) {
+  var cachedModule = __webpack_module_cache__[moduleId];
+  if (cachedModule !== undefined) {
+    return cachedModule.exports;
+  }
+  var module = (__webpack_module_cache__[moduleId] = {
+    exports: {},
+  });
+
+  __webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+
+  return module.exports;
+}
+
+var __webpack_exports__ = {};
+  
+(() => {
+ ${moduleQueue[0].code} 
+})();
+  `;
+};
+
+const outputDir = path.join(workDir, "dist");
+fs.access(outputDir, err => {
+  if (err) fs.mkdirSync(outputDir);
+
+  fs.writeFileSync(path.join(outputDir, "bundle.js"), generateBundle());
+});

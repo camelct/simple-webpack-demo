@@ -5,7 +5,9 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator").default;
 
-const aimJsFilename = "./src/index.js";
+const workDir = path.join(__dirname, "../../");
+
+const aimJsFilename = path.join(workDir, "src", "index.js");
 
 let moduleId = 0;
 
@@ -215,5 +217,6 @@ var __webpack_exports__ = {};
   `;
 };
 
+const outputDir = path.join(workDir, "dist");
 console.log(generateBundle());
-fs.writeFileSync("./dist/bundle.js", generateBundle());
+fs.writeFileSync(path.join(outputDir, "bundle.js"), generateBundle());

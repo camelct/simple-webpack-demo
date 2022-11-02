@@ -5,7 +5,9 @@ const { parse } = require("@babel/parser");
 const traverse = require("@babel/traverse").default;
 const generate = require("@babel/generator").default;
 
-const aimJsFilename = "../index.js";
+const workDir = path.join(__dirname, "../../");
+
+const aimJsFilename = path.join(workDir, "src", "index.js");
 
 let moduleId = 0;
 
@@ -68,7 +70,6 @@ const buildModule = filename => {
 };
 
 const moduleTree = buildModule(aimJsFilename);
-console.log("test-moduleTree", JSON.stringify(moduleTree, null, " "));
 // *moduleTree*
 // {
 //   id: 0,
@@ -97,3 +98,42 @@ console.log("test-moduleTree", JSON.stringify(moduleTree, null, " "));
 //   code: "const sum = require(1);\nconst multi = require(2);",
 // };
 
+function moduleTreeToQueue(moduleTree) {
+  const { deps, ...module } = moduleTree;
+  const moduleQueue = deps.reduce(
+    (cur, item) => {
+      return cur.concat(moduleTreeToQueue(item));
+    },
+    [module],
+  );
+
+  return moduleQueue;
+}
+
+const moduleQueue = moduleTreeToQueue(moduleTree);
+console.log("moduleQueue", moduleQueue);
+// *moduleQueue*
+// [
+//   {
+//     id: 0,
+//     filename: "D:\\node-webpack-study\\src\\index.js",
+//     code: "const sum = require(1);\nconst multi = require(2);",
+//   },
+//   {
+//     id: 1,
+//     filename: "D:\\node-webpack-study\\src\\sum.js",
+//     code: "module.exports = (...args) => args.reduce((x, y) => x + y, 0);",
+//   },
+//   {
+//     id: 2,
+//     filename: "D:\\node-webpack-study\\src\\multi.js",
+//     code:
+//       "const del = require(3);\n" +
+//       "module.exports = (...args) => args.reduce((x, y) => x * y, 0);",
+//   },
+//   {
+//     id: 3,
+//     filename: "D:\\node-webpack-study\\src\\del.js",
+//     code: "module.exports = (...args) => args.reduce((x, y) => x / y, 0);",
+//   },
+// ];
