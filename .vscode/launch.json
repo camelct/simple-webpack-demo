@@ -11,7 +11,7 @@
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}\\build-mini.js"
+      "program": "${workspaceFolder}\\build.js"
     }
   ]
 }

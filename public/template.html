@@ -4,12 +4,16 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="shortcut icon"
+      href="<%= BASE_URL %>favicon.ico"
+      type="image/x-icon"
+    />
+    <title><%= htmlWebpackPlugin.options.title %></title>
   </head>
 
   <body>
-    调试
+    <div>这是GLOBAL_SELF： <%= GLOBAL_SELF %></div>
     <div id="app"></div>
-
-    <script src="../dist/bundle.js"></script>
   </body>
 </html>
